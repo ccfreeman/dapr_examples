@@ -5,6 +5,8 @@ name = "pypi"
 
 [packages]
 lxml = "*"
+dapr = "*"
+fastapi = "*"
 
 [dev-packages]
 
