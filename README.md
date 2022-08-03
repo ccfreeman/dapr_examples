@@ -15,7 +15,7 @@ You can see the invocation of your method succeed. You can try to run the Dapr c
 
 ```
 cd src
-src % dapr run --app-id demo-client pipenv run python client.py
+dapr run --app-id demo-client pipenv run python client.py
 ```
 It doesn't work for me, but it should?
 
