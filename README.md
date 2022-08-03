@@ -4,7 +4,7 @@
 ```
 dapr init
 cd src
-dapr run --app-id demo-actor --dapr-http-port 3501 --app-port 3500 -- pipenv run uvicorn --port 3500 actor_service:app
+dapr run --app-id demo-actor --app-port 3500 -- pipenv run uvicorn --port 3500 actor_service:app
 ```
 
 Now you should see your application running. In another terminal, run
