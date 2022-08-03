@@ -4,9 +4,8 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-lxml = "*"
-dapr = "*"
-fastapi = "*"
+dapr-ext-fastapi = "*"
+asyncio = "*"
 
 [dev-packages]
 
