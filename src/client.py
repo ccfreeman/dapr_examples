@@ -18,7 +18,7 @@ from actor_interface import DemoActorInterface
 
 async def main():
     # Create proxy client
-    proxy = ActorProxy.create('DemoActor', ActorId('3'), DemoActorInterface)
+    proxy = ActorProxy.create('DemoActor', ActorId('1'), DemoActorInterface)
 
     print("Trying to say hello", flush=True)
     await proxy.invoke_method("SayHello")
