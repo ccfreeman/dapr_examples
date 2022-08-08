@@ -1,155 +1,109 @@
 version: '3.8'
-
 services:
 
-  app:
-    build:
+  invoke-receiver:
+    build: 
       context: .
       dockerfile: docker/Dockerfile
-    image: janusapi
-    volumes:
-      - ../Coyote.Procurement.AnnualPricing.Janus.Data/data/:/app/data/
-    container_name: janusapi
-    command: [ "/app/docker-entrypoint.sh" ]
+    image: dapr-test
     ports:
-      - 8080:8080
-    environment: 
-      - GUNICORN_WORKERS=4
-      - COYOTE_HOST_TYPE=qa
-      - RUNNING_AS_DOCKER=True
-      - API_LOAD_JANUS=$API_LOAD_JANUS
-      - RUNNING_TEST_ENVIRONMENT=True
-      - AZURITE_HOSTNAME=azurite
-      - DATA_FROM_CLOUD=$DATA_FROM_CLOUD
-      - BACKTEST_DATE=None
+      - "50051:50051" # Dapr instances communicate over gRPC so we need to expose the gRPC port
+      - "8080:8080"
+    command: [ "/app/docker/docker-entrypoint.sh" ]
     depends_on:
-      - azurite
+      - redis
+      - placement
+    networks:
+      - hello-dapr
 
-  annual-trend-model:
-    image: janusapi
-    command: 
-      - "pipenv"
-      - "run"
-      - "python"
-      - "-m"
-      - "src.workers.annual_trend_worker.main"
+  invoke-receiver-dapr:
+    image: "daprio/daprd:edge"
+    command: [
+      "./daprd",
+      "--app-id", "invoke-receiver",
+      "--app-port", "50051",
+      "--app-protocol", "grpc",
+      "--placement-host-address", "placement:50006", # Dapr's placement service can be reach via the docker DNS entry
+      "--config", "config.yaml",
+      "--components-path", "./components"
+    ]
     volumes:
-      - ../Coyote.Procurement.AnnualPricing.Janus.Data/data/:/app/data/
-    environment: 
-      - GUNICORN_WORKERS=4
-      - COYOTE_HOST_TYPE=qa
-      - RUNNING_AS_DOCKER=true
-      - RUNNING_TEST_ENVIRONMENT=true
-      - AZURITE_HOSTNAME=azurite
-      - DATA_FROM_CLOUD=$DATA_FROM_CLOUD
+        - "./components/:/components" # Mount our components folder for the runtime to use. The mounted location must match the --components-path argument.
+        - "./src/services/config.yaml:/config.yaml"
     depends_on:
-      - app
-      - azurite
+      - invoke-receiver
+    network_mode: "service:invoke-receiver" # Attach the nodeapp-dapr service to the nodeapp network namespace
 
-  seasonal-model:
-    image: janusapi
+################
+
+  invoke-client:
+    build: 
+      context: .
+      dockerfile: docker/Dockerfile
+    image: dapr-test
     deploy:
-      replicas: 4
-    command: 
-      - "pipenv"
-      - "run"
-      - "python"
-      - "-m"
-      - "src.workers.seasonality_worker.main"
-    volumes:
-      - ../Coyote.Procurement.AnnualPricing.Janus.Data/data/:/app/data/
-    environment: 
-      - GUNICORN_WORKERS=4
-      - COYOTE_HOST_TYPE=qa
-      - RUNNING_AS_DOCKER=true
-      - RUNNING_TEST_ENVIRONMENT=true
-      - AZURITE_HOSTNAME=azurite
-      - DATA_FROM_CLOUD=$DATA_FROM_CLOUD
+      replicas: 2
+    # ports:
+    #   - "50007:50007" # Dapr instances communicate over gRPC so we need to expose the gRPC port
+    command: [
+      "dapr", "run",
+      "--app-id", "invoke-client",
+      # "--app-port", "50007",
+      # "--app-protocol", "grpc",
+      "--config", "src/services/config.yaml",
+      "--", 
+      "pipenv", "run", "python", "-m", "src.services.client"
+    ]
     depends_on:
-      - app
-      - azurite
+      - invoke-receiver-dapr
+    networks:
+      - hello-dapr
 
-  current-market-model:
-    image: janusapi
-    command: 
-      - "pipenv"
-      - "run"
-      - "python"
-      - "-m"
-      - "src.workers.current_market_worker.main"
+  invoke-client-dapr:
+    image: "daprio/daprd:edge"
+    command: [
+      "./daprd",
+     "--app-id", "invoke-client",
+    #  "--app-port", "50007",
+    #  "--app-protocol", "grpc",
+     "--placement-host-address", "placement:50006", # Dapr's placement service can be reach via the docker DNS entry
+     "--config", "config.yaml",
+     "--components-path", "./components"
+     ]
     volumes:
-      - ../Coyote.Procurement.AnnualPricing.Janus.Data/data/:/app/data/
-    environment: 
-      - GUNICORN_WORKERS=4
-      - COYOTE_HOST_TYPE=qa
-      - RUNNING_AS_DOCKER=true
-      - RUNNING_TEST_ENVIRONMENT=true
-      - AZURITE_HOSTNAME=azurite
-      - DATA_FROM_CLOUD=$DATA_FROM_CLOUD
+        - "./components/:/components" # Mount our components folder for the runtime to use. The mounted location must match the --components-path argument.
+        - "./src/services/config.yaml:/config.yaml"
     depends_on:
-      - app
-      - azurite
+      - invoke-client
+    network_mode: "service:invoke-client" # Attach the nodeapp-dapr service to the nodeapp network namespace
 
-  responder:
-    image: janusapi
-    command: /app/responder-entrypoint.sh
-    environment: 
-      - GUNICORN_WORKERS=4
-      - COYOTE_HOST_TYPE=qa
-      - RUNNING_AS_DOCKER=True
-      - RUNNING_TEST_ENVIRONMENT=True
-      - AZURITE_HOSTNAME=azurite
-      - DATA_FROM_CLOUD=$DATA_FROM_CLOUD
-    volumes:
-      - ../Coyote.Procurement.AnnualPricing.Janus.Data/data/:/app/data/
-    depends_on:
-      - app
-      - azurite
+############
 
-  # worker:
-  #   image: janusapi
-  #   command: /app/worker-entrypoint.sh
-  #   volumes:
-  #     - ../Coyote.Procurement.AnnualPricing.Janus.Data/data/:/app/data/
-  #   environment: 
-  #     - GUNICORN_WORKERS=4
-  #     - COYOTE_HOST_TYPE=qa
-  #     - RUNNING_AS_DOCKER=True
-  #     - RUNNING_TEST_ENVIRONMENT=True
-  #     - AZURITE_HOSTNAME=azurite
-  #     - DATA_FROM_CLOUD=false
-  #   depends_on:
-  #     - app
-  #     - azurite
-
-  ### JOBS
-
-  backtest-analysis:
-    image: janusapi
-    command: 
-      - "pipenv"
-      - "run"
-      - "python"
-      - "-m"
-      - "src.workers.backtest_analysis.main"
-    volumes:
-      - ../Coyote.Procurement.AnnualPricing.Janus.Data/data/:/app/data/
-    environment:
-      - GUNICORN_WORKERS=4
-      - COYOTE_HOST_TYPE=qa
-      - RUNNING_AS_DOCKER=true
-      - RUNNING_TEST_ENVIRONMENT=true
-      - AZURITE_HOSTNAME=azurite
-      - DATA_FROM_CLOUD=$DATA_FROM_CLOUD
-    depends_on:
-      - azurite
-
-  ### DATA HANDLING SERVICES
-  
-  azurite:
-    image: mcr.microsoft.com/azure-storage/azurite:latest
-    container_name: azurite
-    command: "azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --loose"
+  placement:
+    image: "daprio/dapr:latest"
+    command: ["./placement", "--port", "50006"]
     ports:
-    - 10000:10000
-    - 10001:10001
+      - "50006:50006"
+      # - "9411:9411"
+    networks:
+      - hello-dapr
+
+  ############################
+  # Redis state store
+  ############################
+  redis:
+    image: "redis:alpine"
+    ports:
+      - "6380:6379"
+    networks:
+      - hello-dapr
+
+  zipkin:
+    image: "openzipkin/zipkin"
+    ports:
+      - "9411:9411"
+    networks:
+      - hello-dapr 
+  
+networks:
+  hello-dapr: null

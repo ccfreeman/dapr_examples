@@ -35,4 +35,3 @@ actor = DaprActor(app)
 async def startup_event():
     # Register DemoActor
     await actor.register_actor(DemoActor)
-    

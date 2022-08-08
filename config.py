@@ -51,6 +51,8 @@ class Config(object):
     logging.config.dictConfig(LOGGING_CONFIG)
     LOGGER = logging.getLogger(__name__)
 
+    SERVER_GRPC_PORT = int(node.xpath('//add[@key="serverGrpcPort"]')[0].attrib['value'])
+
 
 try:
     CONFIG = Config()

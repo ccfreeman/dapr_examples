@@ -19,4 +19,21 @@ dapr run --app-id demo-client pipenv run python client.py
 ```
 It doesn't work for me, but it should?
 
+
+# Running a Dapr service
+
+To run the dapr service:
+```
+dapr run --app-id invoke-receiver --app-protocol grpc --app-port 50051 --config src/services/config.yaml -- pipenv run python -m src.services.server
+```
+
+To run the dapr client:
+```
+dapr run --app-id invoke-caller --dapr-grpc-port 50007 --config src/services/config.yaml -- pipenv run python -m src.services.client
+```
+
+# Docker-compose Example
+
+([see this example](https://github.com/dapr/samples/tree/master/hello-docker-compose))
+
 # Todo
