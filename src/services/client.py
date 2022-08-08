@@ -11,12 +11,7 @@ from config import CONFIG
 
 
 logger = logging.getLogger(__name__)
-_NAMES = ['Cole', 'Raychel', 'Bumpkin', 'Dingle', 'Bitchface', 'Darling']
-
-# if len(sys.argv) > 1:
-#     NAME = sys.argv[1]
-# else:
-#     NAME = 'you'
+_NAMES = ['Cole', 'Raychel', 'Bumpkin', 'Dingle', 'Butchnugget', 'Darling']
 
 
 async def run() -> None:
